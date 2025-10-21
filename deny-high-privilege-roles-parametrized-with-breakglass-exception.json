@@ -1,0 +1,62 @@
+{
+  "properties": {
+    "displayName": "Deny assignments of high-privilege roles (parametrized) with breakglass exception",
+    "policyType": "Custom",
+    "mode": "All",
+    "description": "Deny creation of role assignments for the specified high-privilege roles unless the principal is an explicitly excluded breakglass account. Combine with PIM governance and monitoring to reduce risk of circumvention.",
+    "parameters": {
+      "roleDefinitionIds": {
+        "type": "Array",
+        "metadata": {
+          "displayName": "Role definition IDs to deny",
+          "description": "Full resource IDs of role definitions to block, e.g. /providers/Microsoft.Authorization/roleDefinitions/<guid>. Add Owner and any other high-privilege role IDs you want to block."
+        },
+        "defaultValue": [
+          "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
+        ]
+      },
+      "excludedPrincipalIds": {
+        "type": "Array",
+        "metadata": {
+          "displayName": "Excluded principal object IDs (breakglass)",
+          "description": "List of principal (user/service principal) object IDs that are exempted from this policy (breakglass accounts). Use objectId values from Azure AD."
+        },
+        "defaultValue": []
+      },
+      "effect": {
+        "type": "String",
+        "allowedValues": [
+          "deny",
+          "audit",
+          "disabled"
+        ],
+        "defaultValue": "deny",
+        "metadata": {
+          "displayName": "Policy effect",
+          "description": "Effect to apply when rule matches. Use 'audit' to evaluate impact before enforcing."
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "equals": "Microsoft.Authorization/roleAssignments"
+          },
+          {
+            "field": "Microsoft.Authorization/roleAssignments/roleDefinitionId",
+            "in": "[parameters('roleDefinitionIds')]"
+          },
+          {
+            "field": "Microsoft.Authorization/roleAssignments/principalId",
+            "notIn": "[parameters('excludedPrincipalIds')]"
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}

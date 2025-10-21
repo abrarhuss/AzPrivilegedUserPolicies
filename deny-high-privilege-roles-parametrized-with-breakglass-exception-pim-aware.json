@@ -1,0 +1,130 @@
+{
+  "properties": {
+    "displayName": "Deny assignments of high-privilege roles (Parametrized) with breakglass exception (PIM-aware)",
+    "policyType": "Custom",
+    "mode": "All",
+    "description": "Deny creation or scheduling of direct and PIM-related role assignments for specified high-privilege roles unless the principal is an explicitly excluded breakglass account. This blocks direct assignments, eligible assignments, time-bound/active assignments, and requests that could be used to circumvent PIM controls.",
+    "parameters": {
+      "roleDefinitionIds": {
+        "type": "Array",
+        "metadata": {
+          "displayName": "Role definition IDs to deny",
+          "description": "Full resource IDs of role definitions to block, e.g. /providers/Microsoft.Authorization/roleDefinitions/<guid>. Add Owner and other high-privilege role IDs to block."
+        },
+        "defaultValue": [
+          "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635"
+        ]
+      },
+      "excludedPrincipalIds": {
+        "type": "Array",
+        "metadata": {
+          "displayName": "Excluded principal object IDs (breakglass)",
+          "description": "List of principal (user/service principal) object IDs that are exempted from this policy (breakglass accounts). Use objectId values from Azure AD."
+        },
+        "defaultValue": []
+      },
+      "effect": {
+        "type": "String",
+        "allowedValues": [
+          "deny",
+          "audit",
+          "disabled"
+        ],
+        "defaultValue": "deny",
+        "metadata": {
+          "displayName": "Policy effect",
+          "description": "Effect to apply when rule matches. Use 'audit' to evaluate impact before enforcing."
+        }
+      }
+    },
+    "policyRule": {
+      "if": {
+        "anyOf": [
+          {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Authorization/roleAssignments"
+              },
+              {
+                "field": "Microsoft.Authorization/roleAssignments/roleDefinitionId",
+                "in": "[parameters('roleDefinitionIds')]"
+              },
+              {
+                "field": "Microsoft.Authorization/roleAssignments/principalId",
+                "notIn": "[parameters('excludedPrincipalIds')]"
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Authorization/roleEligibilitySchedules"
+              },
+              {
+                "field": "Microsoft.Authorization/roleEligibilitySchedules/roleDefinitionId",
+                "in": "[parameters('roleDefinitionIds')]"
+              },
+              {
+                "field": "Microsoft.Authorization/roleEligibilitySchedules/principalId",
+                "notIn": "[parameters('excludedPrincipalIds')]"
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Authorization/roleAssignmentSchedules"
+              },
+              {
+                "field": "Microsoft.Authorization/roleAssignmentSchedules/roleDefinitionId",
+                "in": "[parameters('roleDefinitionIds')]"
+              },
+              {
+                "field": "Microsoft.Authorization/roleAssignmentSchedules/principalId",
+                "notIn": "[parameters('excludedPrincipalIds')]"
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Authorization/roleEligibilityScheduleRequests"
+              },
+              {
+                "field": "Microsoft.Authorization/roleEligibilityScheduleRequests/roleDefinitionId",
+                "in": "[parameters('roleDefinitionIds')]"
+              },
+              {
+                "field": "Microsoft.Authorization/roleEligibilityScheduleRequests/principalId",
+                "notIn": "[parameters('excludedPrincipalIds')]"
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "field": "type",
+                "equals": "Microsoft.Authorization/roleAssignmentScheduleRequests"
+              },
+              {
+                "field": "Microsoft.Authorization/roleAssignmentScheduleRequests/roleDefinitionId",
+                "in": "[parameters('roleDefinitionIds')]"
+              },
+              {
+                "field": "Microsoft.Authorization/roleAssignmentScheduleRequests/principalId",
+                "notIn": "[parameters('excludedPrincipalIds')]"
+              }
+            ]
+          }
+        ]
+      },
+      "then": {
+        "effect": "[parameters('effect')]"
+      }
+    }
+  }
+}
