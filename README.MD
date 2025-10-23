@@ -157,3 +157,80 @@ Contributions welcome! Please submit issues and pull requests.
 **Author**: Abrar Hussain  
 **Repository**: [abrarhuss/AzPrivilegedUserPolicies](https://github.com/abrarhuss/AzPrivilegedUserPolicies)  
 **File**: deny-high-privilege-roles-parametrized-with-breakglass-exception-pim-aware.json
+
+### Helper Commands for Policy Parameters
+
+#### List Role Definitions
+These PowerShell commands help identify role definitions to include in the `roleDefinitionIds` parameter:
+
+```powershell
+# List all built-in roles with their IDs
+Get-AzRoleDefinition | Where-Object IsCustom -eq $false | Select-Object Name, Id | Sort-Object Name
+
+# Find specific high-privilege roles
+$highPrivilegeRoles = @(
+    'Owner',
+    'Contributor',
+    'User Access Administrator',
+    'Co-Administrator'
+)
+
+Get-AzRoleDefinition | Where-Object { 
+    $_.Name -in $highPrivilegeRoles 
+} | Select-Object Name, Id | Format-Table -AutoSize
+
+# Export high-privilege roles to CSV
+$highPrivRoles = Get-AzRoleDefinition | Where-Object { 
+    $_.IsCustom -eq $false -and (
+        $_.Name -like "*admin*" -or 
+        $_.Name -in $highPrivilegeRoles
+    )
+} 
+
+$highPrivRoles | Select-Object Name, Id | 
+Export-Csv -Path ".\high-privilege-roles.csv" -NoTypeInformation -Encoding UTF8
+
+# Convert role IDs to policy format
+$highPrivRoles | ForEach-Object {
+    "/providers/Microsoft.Authorization/roleDefinitions/$($_.Id)"
+}
+```
+
+#### List Principal IDs for Breakglass Accounts
+These commands help identify Object IDs for the `excludedPrincipalIds` parameter:
+
+```powershell
+# List emergency access accounts
+Get-AzADUser -Filter "startsWith(DisplayName,'emergency')" | 
+    Select-Object DisplayName, Id, UserPrincipalName
+
+# List service principals with high privileges
+Get-AzADServicePrincipal | Where-Object DisplayName -like "*breakglass*" |
+    Select-Object DisplayName, Id, ServicePrincipalType
+
+# Find specific account by display name
+$accountName = "Break Glass Account"
+Get-AzADUser -DisplayName $accountName | 
+    Select-Object DisplayName, Id, UserPrincipalName
+```
+
+#### Example Parameter Values
+```json
+{
+    "roleDefinitionIds": {
+        "value": [
+            "/providers/Microsoft.Authorization/roleDefinitions/8e3af657-a8ff-443c-a75c-2fe8c4bcb635", // Owner
+            "/providers/Microsoft.Authorization/roleDefinitions/b24988ac-6180-42a0-ab88-20f7382dd24c"  // Contributor
+        ]
+    },
+    "excludedPrincipalIds": {
+        "value": [
+            "12345678-1234-1234-1234-123456789012", // Emergency Admin Account
+            "87654321-4321-4321-4321-210987654321"  // Break Glass Service Principal
+        ]
+    },
+    "effect": {
+        "value": "deny"
+    }
+}
+```
